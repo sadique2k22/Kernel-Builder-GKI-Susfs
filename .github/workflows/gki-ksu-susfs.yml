@@ -250,7 +250,7 @@ jobs:
           <?xml version="1.0" encoding="UTF-8"?>
           <manifest>
             <remove-project name="kernel/common" />
-            <project path="common" name="kernel/common" revision="$KERNEL_TAG" remote="aosp" />
+            <project path="common" name="kernel/common" revision="refs/tags/$KERNEL_TAG" remote="aosp" />
           </manifest>
           EOF
           echo ">>> Pinned kernel/common to tag: $KERNEL_TAG"
@@ -259,7 +259,7 @@ jobs:
           for i in $(seq 1 $MAX_RETRIES); do
             echo ">>> Running repo sync (Attempt $i of $MAX_RETRIES)..."
             
-            if repo sync -c --no-clone-bundle -j$(nproc); then
+            if repo sync -c --no-tags --no-clone-bundle --current-branch -j$(nproc); then
               echo ">>> Repo sync successful!"
               break
             else
