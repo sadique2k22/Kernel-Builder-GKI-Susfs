@@ -48,36 +48,51 @@ if [ -f "common/fs/proc/base.c.rej" ]; then
 fi
 
 
-# 3. Fix fs/namespace.c
+# 3. Fix fs/namespace.c (SUSFS mount declarations)
 if [ -f "common/fs/namespace.c.rej" ]; then
   echo ">>> Found namespace.c.rej. Applying manual fix..."
-  
-  # Inject the headers before pnode.h
-  sed -i '/#include "pnode.h"/i\
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
-#include <linux/susfs_def.h>\
-#endif \/\/ #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
-' common/fs/namespace.c
+  rm -f "common/fs/namespace.c.rej"
+fi
 
-  # Inject the externs and macros after trace/hooks/blk.h
-  sed -i '/#include <trace\/hooks\/blk.h>/a\
-\
-#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
-extern bool susfs_is_current_ksu_domain(void);\
-extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\
-\
-#define CL_COPY_MNT_NS BIT(25) \/* used by copy_mnt_ns() *\/\
-\
-#endif \/\/ #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\
-' common/fs/namespace.c
-
-  # Sanity Check: Did the injection actually write to the file?
-  if grep -q 'susfs_is_sdcard_android_data_not_decrypted' common/fs/namespace.c; then
-    echo "  -> namespace.c fix verified!"
-    rm "common/fs/namespace.c.rej"
+# Robustly ensure the SUSFS mount extern declarations + CL_COPY_MNT_NS define are
+# present. The old sed anchors are fragile (and the old grep verification false-
+# passed on usage sites), so inject deterministically after the last #include.
+if ! grep -q 'extern bool susfs_is_current_ksu_domain' common/fs/namespace.c; then
+  echo ">>> namespace.c: injecting SUSFS mount declarations..."
+  python3 - <<'PY'
+p = "common/fs/namespace.c"
+s = open(p).read()
+lines = s.split("\n")
+idx = -1
+for i, l in enumerate(lines):
+    if l.lstrip().startswith("#include"):
+        idx = i
+block = [
+    "#ifdef CONFIG_KSU_SUSFS",
+    "#include <linux/susfs_def.h>",
+    "#endif // #ifdef CONFIG_KSU_SUSFS",
+    "",
+    "#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT",
+    "extern bool susfs_is_current_ksu_domain(void);",
+    "extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;",
+    "#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */",
+    "#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT",
+    "",
+]
+if idx >= 0:
+    lines[idx + 1:idx + 1] = block
+else:
+    lines = block + lines
+open(p, "w").write("\n".join(lines))
+print("injected after include line", idx + 1)
+PY
+  if grep -q 'extern bool susfs_is_current_ksu_domain' common/fs/namespace.c; then
+    echo "  -> namespace.c declaration fix verified!"
   else
-    echo "  [-] WARNING: namespace.c fix failed to inject! The anchor line may have changed." >&2
+    echo "  [-] WARNING: namespace.c declaration injection failed!" >&2
   fi
+else
+  echo ">>> namespace.c SUSFS declarations already present. Skipping."
 fi
 
 # 3.5 Fix fs/super.c
