@@ -63,8 +63,16 @@ jobs:
       - name: Integrate SUSFS (kernel side)
         run: |
           cd kernel
-          git clone --depth=1 -b "${{ inputs.susfs_branch }}" \
-            https://gitlab.com/simonpunk/susfs4ksu.git /tmp/susfs
+          for i in 1 2 3 4 5; do
+            echo ">>> Cloning susfs4ksu (attempt $i)..."
+            if git clone --depth=1 -b "${{ inputs.susfs_branch }}" \
+                 https://gitlab.com/simonpunk/susfs4ksu.git /tmp/susfs; then
+              break
+            fi
+            rm -rf /tmp/susfs
+            sleep 15
+          done
+          test -d /tmp/susfs/kernel_patches || { echo "[-] SUSFS clone failed"; exit 1; }
           PATCH=$(find /tmp/susfs/kernel_patches -maxdepth 1 -name '50_add_susfs_in_*.patch' | head -n1)
           echo ">>> Using patch: $PATCH"
           cp -f "$PATCH" .
