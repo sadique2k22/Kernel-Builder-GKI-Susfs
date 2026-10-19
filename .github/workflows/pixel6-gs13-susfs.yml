@@ -75,17 +75,15 @@ jobs:
       - name: Configure SUSFS + KSU
         run: |
           cd kernel
-          cat >> arch/arm64/configs/gki_defconfig <<'EOF'
-CONFIG_KSU=y
-CONFIG_KSU_SUSFS=y
-CONFIG_KSU_SUSFS_SUS_PATH=y
-CONFIG_KSU_SUSFS_SUS_MOUNT=y
-CONFIG_KSU_SUSFS_SUS_KSTAT=y
-CONFIG_KSU_SUSFS_SUS_MAP=y
-CONFIG_KSU_SUSFS_SPOOF_UNAME=y
-CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
-CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
-EOF
+          echo "CONFIG_KSU=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> arch/arm64/configs/gki_defconfig
           echo ">>> Config appended"
 
       - name: Build kernel
@@ -108,24 +106,24 @@ EOF
           rm -rf ak3/.git ak3/README.md
           rm -f ak3/Image ak3/Image.lz4 ak3/anykernel.sh 2>/dev/null || true
           cp kernel/out/Image.lz4 ak3/Image.lz4
-          cat > ak3/anykernel.sh <<'EOF'
-### AnyKernel3 Ramdisk Mod Script
-properties() { '
-kernel.string=Pixel6 A13 KSU-Next SUSFS
-do.devicecheck=0
-do.modules=0
-do.systemless=1
-do.cleanup=1
-device.name1=
-'; }
-BLOCK=/dev/block/by-name/boot;
-IS_SLOT_DEVICE=1;
-RAMDISK_COMPRESSION=auto;
-PATCH_VBMETA_FLAG=auto;
-. ./tools/ak3-core.sh;
-split_boot;
-flash_boot;
-EOF
+          printf '%s\n' \
+            '### AnyKernel3 Ramdisk Mod Script' \
+            "properties() { '" \
+            'kernel.string=Pixel6 A13 KSU-Next SUSFS' \
+            'do.devicecheck=0' \
+            'do.modules=0' \
+            'do.systemless=1' \
+            'do.cleanup=1' \
+            'device.name1=' \
+            "'; }" \
+            'BLOCK=/dev/block/by-name/boot;' \
+            'IS_SLOT_DEVICE=1;' \
+            'RAMDISK_COMPRESSION=auto;' \
+            'PATCH_VBMETA_FLAG=auto;' \
+            '. ./tools/ak3-core.sh;' \
+            'split_boot;' \
+            'flash_boot;' \
+            > ak3/anykernel.sh
           cd ak3
           zip -r9 "../${{ inputs.build_name }}-KSU-Next-SUSFS-AK3.zip" .
           cd ..
