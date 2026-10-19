@@ -35,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install build dependencies
         run: |
           sudo apt-get update -qq
@@ -60,24 +62,15 @@ jobs:
             sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
           echo ">>> KernelSU-Next integrated: $(cd KernelSU-Next && git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
 
-      - name: Integrate SUSFS (kernel side)
+      - name: Integrate SUSFS (kernel side, vendored)
         run: |
           cd kernel
-          for i in 1 2 3 4 5; do
-            echo ">>> Cloning susfs4ksu (attempt $i)..."
-            if git clone --depth=1 -b "${{ inputs.susfs_branch }}" \
-                 https://gitlab.com/simonpunk/susfs4ksu.git /tmp/susfs; then
-              break
-            fi
-            rm -rf /tmp/susfs
-            sleep 15
-          done
-          test -d /tmp/susfs/kernel_patches || { echo "[-] SUSFS clone failed"; exit 1; }
-          PATCH=$(find /tmp/susfs/kernel_patches -maxdepth 1 -name '50_add_susfs_in_*.patch' | head -n1)
-          echo ">>> Using patch: $PATCH"
+          SUSFS_DIR="$GITHUB_WORKSPACE/tools/susfs_a13"
+          PATCH=$(find "$SUSFS_DIR" -maxdepth 1 -name '50_add_susfs_in_*.patch' | head -n1)
+          echo ">>> Using vendored patch: $PATCH"
           cp -f "$PATCH" .
-          cp -rf /tmp/susfs/kernel_patches/fs/* fs/
-          cp -rf /tmp/susfs/kernel_patches/include/linux/* include/linux/
+          cp -rf "$SUSFS_DIR/fs/"* fs/
+          cp -rf "$SUSFS_DIR/include/linux/"* include/linux/
           patch -p1 --no-backup-if-mismatch < "$(basename "$PATCH")" || echo "[!] SUSFS patch had rejects (some are expected)"
 
       - name: Configure SUSFS + KSU
