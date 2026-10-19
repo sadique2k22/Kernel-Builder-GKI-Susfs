@@ -88,9 +88,11 @@ jobs:
           echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_MAP=y" >> arch/arm64/configs/gki_defconfig
           echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> arch/arm64/configs/gki_defconfig
+          echo "# CONFIG_KSU_SUSFS_OPEN_REDIRECT is not set" >> arch/arm64/configs/gki_defconfig
+          echo "# CONFIG_KSU_SUSFS_SUS_MAP is not set" >> arch/arm64/configs/gki_defconfig
+          echo "# CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG is not set" >> arch/arm64/configs/gki_defconfig
+          echo "# CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS is not set" >> arch/arm64/configs/gki_defconfig
           echo ">>> Config appended"
 
       - name: Build kernel
