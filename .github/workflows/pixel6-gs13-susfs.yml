@@ -72,7 +72,7 @@ jobs:
       - name: Apply SUSFS KSU patch
         run: |
           cd kernel/KernelSU
-          patch -p1 < "$GITHUB_WORKSPACE/tools/susfs_a13/10_enable_susfs_for_ksu.patch" || echo "[!] KSU SUSFS patch rejects"
+          patch -F 3 -p1 < "$GITHUB_WORKSPACE/tools/susfs_a13/10_enable_susfs_for_ksu.patch" || echo "[!] KSU SUSFS patch rejects"
 
       - name: Configure SUSFS + KSU
         run: |
