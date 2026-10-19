@@ -1,0 +1,141 @@
+name: Pixel6 GS13 SUSFS Kernel (KernelSU-Next)
+run-name: "Pixel6 A13: ${{ inputs.build_name }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_name:
+        description: "Build Name"
+        required: false
+        type: string
+        default: "Pixel6-A13"
+      kernel_branch:
+        description: "AOSP android-gs kernel branch"
+        required: false
+        type: string
+        default: "android-gs-raviole-5.10-android13-qpr3"
+      ksu_repo:
+        description: "KernelSU-Next repo (SUSFS-integrated)"
+        required: false
+        type: string
+        default: "https://github.com/shoey63/KernelSU-Next.git"
+      ksu_ref:
+        description: "KernelSU-Next branch/tag"
+        required: false
+        type: string
+        default: "stable"
+      susfs_branch:
+        description: "SUSFS branch"
+        required: false
+        type: string
+        default: "gki-android13-5.10"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq git curl cpio lz4 flex bison bc \
+            libssl-dev libelf-dev binutils-aarch64-linux-gnu \
+            clang lld llvm dwarves python3
+
+      - name: Clone kernel source
+        run: |
+          git clone --depth=1 -b "${{ inputs.kernel_branch }}" \
+            https://android.googlesource.com/kernel/common kernel
+          cd kernel
+          echo ">>> Kernel HEAD: $(git rev-parse --short HEAD)"
+          grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) =' Makefile | tr '\n' ' '; echo
+
+      - name: Integrate KernelSU-Next
+        run: |
+          cd kernel
+          git clone --depth=1 -b "${{ inputs.ksu_ref }}" "${{ inputs.ksu_repo }}" KernelSU-Next
+          ln -sfn ../../KernelSU-Next/kernel drivers/kernelsu
+          grep -q "kernelsu" drivers/Makefile || printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
+            sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+          echo ">>> KernelSU-Next integrated: $(cd KernelSU-Next && git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
+
+      - name: Integrate SUSFS (kernel side)
+        run: |
+          cd kernel
+          git clone --depth=1 -b "${{ inputs.susfs_branch }}" \
+            https://gitlab.com/simonpunk/susfs4ksu.git /tmp/susfs
+          PATCH=$(find /tmp/susfs/kernel_patches -maxdepth 1 -name '50_add_susfs_in_*.patch' | head -n1)
+          echo ">>> Using patch: $PATCH"
+          cp -f "$PATCH" .
+          cp -rf /tmp/susfs/kernel_patches/fs/* fs/
+          cp -rf /tmp/susfs/kernel_patches/include/linux/* include/linux/
+          patch -p1 --no-backup-if-mismatch < "$(basename "$PATCH")" || echo "[!] SUSFS patch had rejects (some are expected)"
+
+      - name: Configure SUSFS + KSU
+        run: |
+          cd kernel
+          cat >> arch/arm64/configs/gki_defconfig <<'EOF'
+CONFIG_KSU=y
+CONFIG_KSU_SUSFS=y
+CONFIG_KSU_SUSFS_SUS_PATH=y
+CONFIG_KSU_SUSFS_SUS_MOUNT=y
+CONFIG_KSU_SUSFS_SUS_KSTAT=y
+CONFIG_KSU_SUSFS_SUS_MAP=y
+CONFIG_KSU_SUSFS_SPOOF_UNAME=y
+CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y
+CONFIG_KSU_SUSFS_OPEN_REDIRECT=y
+EOF
+          echo ">>> Config appended"
+
+      - name: Build kernel
+        run: |
+          cd kernel
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          make O=out LLVM=1 gki_defconfig
+          make O=out LLVM=1 -j$(nproc)
+          grep -q "CONFIG_KSU=y" out/.config && echo "[+] KSU enabled"
+          grep -q "CONFIG_KSU_SUSFS=y" out/.config && echo "[+] SUSFS enabled"
+          lz4 -c -l -12 out/arch/arm64/boot/Image > out/Image.lz4
+          ls -lh out/arch/arm64/boot/Image out/Image.lz4
+
+      - name: Package AnyKernel3
+        run: |
+          mkdir -p ak3
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git ak3-src
+          cp -rf ak3-src/* ak3/
+          rm -rf ak3/.git ak3/README.md
+          rm -f ak3/Image ak3/Image.lz4 ak3/anykernel.sh 2>/dev/null || true
+          cp kernel/out/Image.lz4 ak3/Image.lz4
+          cat > ak3/anykernel.sh <<'EOF'
+### AnyKernel3 Ramdisk Mod Script
+properties() { '
+kernel.string=Pixel6 A13 KSU-Next SUSFS
+do.devicecheck=0
+do.modules=0
+do.systemless=1
+do.cleanup=1
+device.name1=
+'; }
+BLOCK=/dev/block/by-name/boot;
+IS_SLOT_DEVICE=1;
+RAMDISK_COMPRESSION=auto;
+PATCH_VBMETA_FLAG=auto;
+. ./tools/ak3-core.sh;
+split_boot;
+flash_boot;
+EOF
+          cd ak3
+          zip -r9 "../${{ inputs.build_name }}-KSU-Next-SUSFS-AK3.zip" .
+          cd ..
+          ls -lh *AK3.zip
+
+      - name: Upload kernel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.build_name }}-KSU-Next-SUSFS
+          path: |
+            *AK3.zip
+            kernel/out/arch/arm64/boot/Image
+          if-no-files-found: error
