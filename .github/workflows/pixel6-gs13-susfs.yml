@@ -73,6 +73,8 @@ jobs:
         run: |
           cd kernel/KernelSU
           patch -F 3 -p1 < "$GITHUB_WORKSPACE/tools/susfs_a13/10_enable_susfs_for_ksu.patch" || echo "[!] KSU SUSFS patch rejects"
+          # 5.10 compat: SUSFS patch uses close_fd() (5.12+); revert to KernelSU's ksyscall wrapper
+          sed -i 's/close_fd(fd)/ksu_close_fd(fd)/' kernel/preinit/preinit.c
 
       - name: Configure SUSFS + KSU
         run: |
