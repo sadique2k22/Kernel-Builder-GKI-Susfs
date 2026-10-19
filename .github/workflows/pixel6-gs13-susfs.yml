@@ -52,15 +52,15 @@ jobs:
           echo ">>> Kernel HEAD: $(git rev-parse --short HEAD)"
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) =' Makefile | tr '\n' ' '; echo
 
-      - name: Integrate KernelSU-Next
+      - name: Integrate BakaSU
         run: |
           cd kernel
-          git clone --depth=1 -b "${{ inputs.ksu_ref }}" "${{ inputs.ksu_repo }}" KernelSU-Next
-          ln -sfn ../KernelSU-Next/kernel drivers/kernelsu
+          git clone --depth=1 -b stable https://github.com/shoey63/BakaSU.git KernelSU
+          ln -sfn ../KernelSU/kernel drivers/kernelsu
           grep -q "kernelsu" drivers/Makefile || printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
-          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
-            sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-          echo ">>> KernelSU-Next integrated: $(cd KernelSU-Next && git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+          sed -i '/Please wait susfs update/d' KernelSU/kernel/tools/susfs_compat.mk 2>/dev/null || true
+          echo ">>> BakaSU integrated: $(cd KernelSU && git rev-parse --short HEAD)"
 
       - name: Integrate SUSFS (kernel side, vendored)
         run: |
