@@ -52,15 +52,11 @@ jobs:
           echo ">>> Kernel HEAD: $(git rev-parse --short HEAD)"
           grep -E '^(VERSION|PATCHLEVEL|SUBLEVEL) =' Makefile | tr '\n' ' '; echo
 
-      - name: Integrate BakaSU
+      - name: Integrate KernelSU (tiann)
         run: |
           cd kernel
-          git clone --depth=1 -b stable https://github.com/shoey63/BakaSU.git KernelSU
-          ln -sfn ../KernelSU/kernel drivers/kernelsu
-          grep -q "kernelsu" drivers/Makefile || printf '\nobj-$(CONFIG_KSU) += kernelsu/\n' >> drivers/Makefile
-          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-          sed -i '/Please wait susfs update/d' KernelSU/kernel/tools/susfs_compat.mk 2>/dev/null || true
-          echo ">>> BakaSU integrated: $(cd KernelSU && git rev-parse --short HEAD)"
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v3.2.5
+          echo ">>> KernelSU integrated: $(cd KernelSU && git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
 
       - name: Integrate SUSFS (kernel side, vendored)
         run: |
@@ -72,6 +68,11 @@ jobs:
           cp -rf "$SUSFS_DIR/fs/"* fs/
           cp -rf "$SUSFS_DIR/include/linux/"* include/linux/
           patch -p1 --no-backup-if-mismatch < "$(basename "$PATCH")" || echo "[!] SUSFS patch had rejects (some are expected)"
+
+      - name: Apply SUSFS KSU patch
+        run: |
+          cd kernel/KernelSU
+          patch -p1 < "$GITHUB_WORKSPACE/tools/susfs_a13/10_enable_susfs_for_ksu.patch" || echo "[!] KSU SUSFS patch rejects"
 
       - name: Configure SUSFS + KSU
         run: |
