@@ -55,7 +55,7 @@ jobs:
       - name: Integrate KernelSU (tiann)
         run: |
           cd kernel
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v3.2.5
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v3.3.1
           echo ">>> KernelSU integrated: $(cd KernelSU && git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
 
       - name: Integrate SUSFS (kernel side, vendored)
