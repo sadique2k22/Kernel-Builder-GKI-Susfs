@@ -105,13 +105,13 @@ jobs:
           git config user.name "runner"
           git add -A
           git commit -m "SUSFS + KSU integration" || echo "nothing to commit"
-          git tag -f v5.10.157-android13 || true
 
       - name: Build kernel
         run: |
           cd kernel
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
+          export LOCALVERSION=
           make O=out LLVM=1 gki_defconfig
           make O=out LLVM=1 -j$(nproc)
           grep -q "CONFIG_KSU=y" out/.config && echo "[+] KSU enabled"
