@@ -93,6 +93,8 @@ jobs:
           echo "# CONFIG_LTO_CLANG_FULL is not set" >> arch/arm64/configs/gki_defconfig
           echo "# CONFIG_LTO_CLANG_THIN is not set" >> arch/arm64/configs/gki_defconfig
           echo "# CONFIG_CFI_CLANG is not set" >> arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_LOCALVERSION="-android13-4-00003-g776d0a76f6aa-ab10208116"' >> arch/arm64/configs/gki_defconfig
+          echo "# CONFIG_LOCALVERSION_AUTO is not set" >> arch/arm64/configs/gki_defconfig
           echo ">>> Config appended"
 
       - name: Build kernel
