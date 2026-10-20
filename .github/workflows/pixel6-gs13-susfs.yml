@@ -95,6 +95,8 @@ jobs:
           echo "# CONFIG_CFI_CLANG is not set" >> arch/arm64/configs/gki_defconfig
           echo 'CONFIG_LOCALVERSION="-android13-4-00003-g776d0a76f6aa-ab10208116"' >> arch/arm64/configs/gki_defconfig
           echo "# CONFIG_LOCALVERSION_AUTO is not set" >> arch/arm64/configs/gki_defconfig
+          printf '#!/bin/sh\nexit 0\n' > scripts/setlocalversion
+          chmod +x scripts/setlocalversion
           echo ">>> Config appended"
 
       - name: Commit source changes (avoid dirty '+' in version)
