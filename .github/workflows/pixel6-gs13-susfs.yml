@@ -97,6 +97,14 @@ jobs:
           echo "# CONFIG_LOCALVERSION_AUTO is not set" >> arch/arm64/configs/gki_defconfig
           echo ">>> Config appended"
 
+      - name: Commit source changes (avoid dirty '+' in version)
+        run: |
+          cd kernel
+          git config user.email "runner@github.actions"
+          git config user.name "runner"
+          git add -A
+          git commit -m "SUSFS + KSU integration" || echo "nothing to commit"
+
       - name: Build kernel
         run: |
           cd kernel
