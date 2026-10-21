@@ -38,6 +38,10 @@ cp -f "${COMMON_PATCH_SRC}" common/
 cp -rf susfs4ksu/kernel_patches/fs/* common/fs/
 cp -rf susfs4ksu/kernel_patches/include/linux/* common/include/linux/
 
+echo ">>> Branding SUSFS_VERSION with CRABID..."
+sed -i 's/#define SUSFS_VERSION "v2.3.0"/#define SUSFS_VERSION "CRABID v2.3.0"/' common/include/linux/susfs.h
+grep -m1 'SUSFS_VERSION' common/include/linux/susfs.h || echo "[-] SUSFS_VERSION sed did not match"
+
 echo ">>> Applying common kernel SUSFS patch..."
 (cd common && patch -p1 --no-backup-if-mismatch < "$(basename "${COMMON_PATCH_SRC}")") || true
 
