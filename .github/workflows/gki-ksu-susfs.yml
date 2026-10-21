@@ -224,11 +224,7 @@ jobs:
             echo "USE_DYNAMIC_TRANSPLANT=false" >> $GITHUB_ENV
             echo "SUSFS_REPO_URL=https://gitlab.com/shoey63/susfs4ksu.git" >> $GITHUB_ENV
             echo "KSU_VARIANT_REPO_URL=https://github.com/shoey63/${{ inputs.root_manager }}.git" >> $GITHUB_ENV
-            if [ "${{ inputs.root_manager }}" == "KernelSU-Next" ]; then
-              echo "KSU_VARIANT_REF=v3.4.2" >> $GITHUB_ENV
-            else
-              echo "KSU_VARIANT_REF=${{ inputs.build_channel }}" >> $GITHUB_ENV
-            fi
+            echo "KSU_VARIANT_REF=${{ inputs.build_channel }}" >> $GITHUB_ENV
           fi
         shell: bash
 
